@@ -1,0 +1,129 @@
+# ==============================================================================
+# ViM 无人机射频开集识别 主配置文件
+# Virtual-logit Matching for UAV RF Open-Set Recognition
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 数据集配置
+# ------------------------------------------------------------------------------
+dataset:
+  # 数据集根目录（每个子文件夹对应一个类别）
+  root: "./data/uav_rf"
+
+  # 指定为"未知类"的类别名称列表（这些类别的样本全部进入测试集，训练/验证阶段绝对不可见）
+  unknown_classes:
+    - "unknown_drone_A"
+    - "unknown_drone_B"
+  # 提示：已知类 = 数据集中所有类别 - 上述未知类
+
+  # 已知类的样本划分比例（三者之和必须等于 1.0）
+  train_ratio: 0.7
+  val_ratio:   0.15
+  test_ratio:  0.15
+
+  # DataLoader 配置
+  num_workers: 4
+  pin_memory: true
+
+  # 数据预处理（针对 512×512 的 STFT 二维矩阵）
+  # 归一化参数：由于输入为单通道 STFT 能量谱，使用如下均值/方差
+  normalize_mean: [0.5]
+  normalize_std:  [0.5]
+
+# ------------------------------------------------------------------------------
+# 模型配置（模型工厂）
+# ------------------------------------------------------------------------------
+model:
+  # 可选主干网络：resnet50 | resnet101 | resnet18 | efficientnet_b0
+  backbone: "resnet50"
+
+  # 预训练权重：imagenet | none
+  pretrained: "imagenet"
+
+  # 是否将输入视为单通道（STFT 灰度图），设为 true 会修改第一层卷积为 in_channels=1
+  single_channel_input: true
+
+  # Dropout 率（分类头前）
+  dropout: 0.0
+
+# ------------------------------------------------------------------------------
+# 训练配置
+# ------------------------------------------------------------------------------
+train:
+  # 随机种子
+  seed: 42
+
+  # 训练轮数
+  epochs: 100
+
+  # 批大小
+  batch_size: 64
+
+  # 是否开启混合精度训练（AMP）
+  amp: true
+
+  # 梯度裁剪最大范数（0 表示不裁剪）
+  grad_clip: 5.0
+
+  # 优化器工厂：sgd | adam | adamw
+  optimizer:
+    type: "adamw"
+    lr: 0.001
+    weight_decay: 0.0001
+    # SGD 专属参数
+    momentum: 0.9
+    nesterov: true
+    # Adam/AdamW 专属参数
+    betas: [0.9, 0.999]
+    eps: 1.0e-8
+
+  # 学习率调度器工厂：cosine | step | multistep | plateau | warmup_cosine | none
+  scheduler:
+    type: "cosine"
+    # CosineAnnealingLR 参数
+    t_max: 100          # 等于 epochs
+    eta_min: 1.0e-6
+    # StepLR 参数
+    step_size: 30
+    gamma: 0.1
+    # MultiStepLR 参数
+    milestones: [40, 70, 90]
+    # ReduceLROnPlateau 参数
+    patience: 10
+    factor: 0.5
+    # WarmupCosine 参数
+    warmup_epochs: 5
+
+# ------------------------------------------------------------------------------
+# ViM 算法配置
+# ------------------------------------------------------------------------------
+vim:
+  # 主子空间维度 D
+  # 如果设为 -1，则自动根据特征维度判断：
+  #   特征维度 >= 2048 → D=1000
+  #   特征维度 >= 768  → D=512
+  #   否则             → D = 特征维度 // 2
+  dim: -1
+
+  # OOD 检测阈值百分位（在 ID 验证集上，保留该百分比的样本判为 ID）
+  # 例如 0.95 表示取验证集 ViM 得分的第 5% 分位数作为阈值
+  tpr: 0.95
+
+# ------------------------------------------------------------------------------
+# 路径配置
+# ------------------------------------------------------------------------------
+paths:
+  # 训练产物保存根目录
+  output_dir: "./outputs"
+
+  # TensorBoard 日志目录
+  tensorboard_dir: "./runs"
+
+  # 最优模型检查点文件名（保存在 output_dir 下）
+  best_model_name: "best_model.pth"
+
+  # 最终测试指标保存文件路径
+  result_txt: "./outputs/test_results.txt"
+
+  # 预提取特征缓存目录（避免重复前向传播）
+  feature_cache_dir: "./outputs/feature_cache"
