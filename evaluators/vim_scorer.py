@@ -176,8 +176,13 @@ class ViMScorer:
         # ---- 步骤 1：计算坐标原点 o = -(W^T)^+ b ----
         # W^T 的维度为 (D, C)，广义逆维度为 (C, D)
         print("  步骤 1: 计算坐标原点（消除分类偏置）...")
+        print(f"  W 形状: {W.shape}, b 形状: {b.shape}")
         W_T = W.T  # (D, C)
-        self.origin_o = -pinv(W_T) @ b  # (D,)
+        print(f"  W_T 形状: {W_T.shape}")
+        print(f"  pinv(W_T) 形状: {pinv(W_T).shape}")
+        # 正确的计算：o = -(W^T)^+ b
+        # pinv(W_T) 形状为 (C, D)，b 形状为 (C,)，所以应该是 b @ pinv(W_T)
+        self.origin_o = -(b @ pinv(W_T))  # (D,)
         print(f"  原点向量 o 的范数: {norm(self.origin_o):.4f}")
 
         # ---- 步骤 2：构建主子空间 ----

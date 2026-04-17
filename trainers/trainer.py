@@ -61,7 +61,8 @@ class Trainer:
         self.best_model_path = os.path.join(output_dir, cfg["paths"]["best_model_name"])
 
         # TensorBoard
-        self.writer = SummaryWriter(log_dir=tb_dir)
+        absolute_tb_dir = os.path.abspath(tb_dir)
+        self.writer = SummaryWriter(log_dir=absolute_tb_dir)
 
         # 损失函数：交叉熵
         self.criterion = nn.CrossEntropyLoss()
