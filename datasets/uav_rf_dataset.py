@@ -215,25 +215,13 @@ class DatasetBuilder:
               f"(公式: 1 - sqrt(K_known/K_total))")
         print(f"{'='*60}\n")
 
-    def _build_transform(self, is_train: bool) -> transforms.Compose:
-        """
-        构建数据变换流水线
-        
-        参数:
-            is_train: 是否为训练集（训练集可做数据增强）
-        """
+    def _build_transform(self) -> transforms.Compose:
+        """构建数据变换流水线（仅归一化）"""
         single_ch = self.cfg["model"].get("single_channel_input", True)
         mean = self.data_cfg["normalize_mean"]
         std = self.data_cfg["normalize_std"]
 
         ops = []
-
-        if is_train:
-            # 训练集随机增强（STFT 图谱适用的增强方式）
-            ops += [
-                transforms.RandomHorizontalFlip(p=0.5),
-                transforms.RandomAffine(degrees=0, translate=(0.05, 0.05)),
-            ]
 
         # 归一化（对 Tensor 直接操作）
         ops.append(transforms.Normalize(mean=mean, std=std))
@@ -268,7 +256,7 @@ class DatasetBuilder:
         # 注意：test 集包含标签为 -1 的未知类样本，DataLoader 可正常处理
         dataset = UAVRFDataset(
             samples=samples,
-            transform=self._build_transform(is_train),
+            transform=self._build_transform(),
             single_channel=self.cfg["model"].get("single_channel_input", True),
         )
 
